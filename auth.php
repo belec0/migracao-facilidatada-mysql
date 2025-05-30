@@ -1,42 +1,35 @@
 <?php
 session_start();
-include 'conexao.php';
 
-if (!$conn_producao || $conn_producao->connect_error) {
-    http_response_code(500);
-    echo "Erro ao conectar com o banco de produção.";
-    exit;
-}
+// Carrega variáveis do .env
+$env = parse_ini_file(__DIR__ . '/.env');
 
+// Dados de login vindos do POST
 $cpf = $_POST['cpf'] ?? '';
+$senhaDigitada = $_POST['senha'] ?? '';
+
+// Sanitiza CPF
 $cpf = str_replace(['.', '-'], '', $cpf);
 
-$senha = md5($_POST['senha'] ?? '');
+// Compara com dados do .env
+$loginEnv = $env['USUARIO_1_LOGIN'] ?? '';
+$senhaEnv = $env['USUARIO_1_SENHA'] ?? '';
+$nomeEnv = $env['USUARIO_1_NOME'] ?? '';
 
-$sql = "SELECT * FROM usuarios WHERE cpf = ?";
-$stmt = $conn_producao->prepare($sql);
-
-if (!$stmt) {
-    http_response_code(500);
-    echo "Erro na preparação da consulta.";
-    exit;
-}
-
-$stmt->bind_param("s", $cpf);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows === 0) {
+if ($cpf !== $loginEnv) {
     echo "CPF não encontrado.";
     exit;
 }
 
-$usuario = $result->fetch_assoc();
-
-if ($usuario['senha'] !== $senha) {
+if ($senhaDigitada !== $senhaEnv) {
     echo "Senha incorreta.";
     exit;
 }
 
-$_SESSION['usuario'] = $usuario;
+// Autenticação válida, cria sessão
+$_SESSION['usuario'] = [
+    'nome' => $nomeEnv,
+    'cpf' => $loginEnv
+];
+
 echo "success";
