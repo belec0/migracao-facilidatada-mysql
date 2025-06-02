@@ -42,6 +42,10 @@ function getEstrutura($conn, $nome_conexao) {
     return $estruturas;
 }
 
+function normalizaTimestamp($valor) {
+    return strtolower(trim(str_replace(['()', ' '], '', $valor)));
+}
+
 function compararEstruturas($nome1, $nome2, $estrutura1, $estrutura2) {
     $html = "<div class='diff-box'>";
     $html .= "<h5>Comparando: <strong>$nome1</strong> ⇄ <strong>$nome2</strong></h5>";
@@ -118,8 +122,18 @@ function compararEstruturas($nome1, $nome2, $estrutura1, $estrutura2) {
 
             foreach (['Type', 'Null', 'Default', 'Key'] as $atributo) {
                 if ($a[$atributo] != $b[$atributo]) {
+                    // Tratamento especial para ignorar diferenças de sintaxe em CURRENT_TIMESTAMP
+                    if (
+                        $atributo === 'Default' &&
+                        is_string($a['Default']) && is_string($b['Default']) &&
+                        normalizaTimestamp($a['Default']) === normalizaTimestamp($b['Default'])
+                    ) {
+                        continue; // ignora a diferença
+                    }
+
                     $diferencas[] = "$atributo: $nome1=[$a[$atributo]] ≠ $nome2=[$b[$atributo]]";
                 }
+
             }
 
             if (!empty($diferencas)) {
